@@ -117,6 +117,14 @@ SECTIONS {
     KEEP(*(.i2c_error_map))
     LONG(0) LONG(0)
 
+    i2s_errors = ABSOLUTE(.);
+    KEEP(*(.i2s_errors))
+    LONG(0) LONG(0)
+
+    i2s_error_map = ABSOLUTE(.);
+    KEEP(*(.i2s_error_map))
+    LONG(0) LONG(0)
+
     lora_errors = ABSOLUTE(.);
     KEEP(*(.lora_errors))
     LONG(0) LONG(0)

@@ -3,10 +3,10 @@
  *
  * Copyright (C) 2015 - 2017
  * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
- * 
+ *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
- * 
- * All rights reserved.  
+ *
+ * All rights reserved.
  *
  * Permission to use, copy, modify, and distribute this software
  * and its documentation for any purpose and without fee is hereby
@@ -34,7 +34,7 @@
 
 /*
  * ----------------------------------------------------------------
- * GPIO 
+ * GPIO
  * ----------------------------------------------------------------
 */
 
@@ -191,7 +191,7 @@ typedef uint64_t gpio_pin_mask_t;
 
 /*
  * ----------------------------------------------------------------
- * IC2 
+ * IC2
  * ----------------------------------------------------------------
  */
 
@@ -208,6 +208,27 @@ typedef uint64_t gpio_pin_mask_t;
 // ESP32 available i2c unit names
 #define CPU_I2C0_NAME  "I2C0"
 #define CPU_I2C1_NAME  "I2C1"
+
+
+/*
+ * ----------------------------------------------------------------
+ * ICS
+ * ----------------------------------------------------------------
+ */
+
+// Unit bounds
+#define CPU_FIRST_I2S 0
+#define CPU_LAST_I2S  1
+
+#define CPU_I2S_ALL 0b11
+
+// ESP32 available i2s units
+#define CPU_I2S0     0
+#define CPU_I2S1     1
+
+// ESP32 available i2s unit names
+#define CPU_I2S0_NAME  "I2S0"
+#define CPU_I2S1_NAME  "I2S1"
 
 
 /*

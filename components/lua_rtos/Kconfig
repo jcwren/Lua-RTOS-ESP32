@@ -680,6 +680,10 @@ menu "Lua RTOS"
 				  	bool "Include i2c module in build"
 				  	default y
 		
+			  	config LUA_RTOS_LUA_USE_I2S
+				  	bool "Include i2s module in build"
+				  	default y
+		
 			  	config LUA_RTOS_LUA_USE_PIO
 				  	bool "Include pio (gpio) module in build"
 				  	default y
