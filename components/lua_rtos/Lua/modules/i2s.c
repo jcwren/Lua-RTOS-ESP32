@@ -31,6 +31,8 @@
 
 #if CONFIG_LUA_RTOS_LUA_USE_I2S
 
+#include <string.h>
+
 #include "lua.h"
 #include "error.h"
 #include "lauxlib.h"
@@ -45,22 +47,43 @@ extern LUA_REG_TYPE i2s_error_map[];
 extern driver_message_t i2s_errors[];
 
 typedef struct {
-	int unit;
+    int unit;
 } i2s_userdata_t;
 
 static int li2s_setup( lua_State* L ) {
-	driver_error_t *error;
+    driver_error_t *error;
+    int unit;
+    int queue_size;
+    i2s_config_t config;
+    i2s_pin_config_t pin;
 
-    int unit = luaL_checkinteger(L, 1);
-    int mode = luaL_checkinteger(L, 2);
+    memset (&config, 0, sizeof (config));
+    memset (&pin, 0, sizeof (pin));
 
-    if ((error = i2s_lua_setup(unit, mode))) {
-    	return luaL_driver_error(L, error);
+    unit = luaL_checkinteger(L, 1);
+
+    config.mode                 = luaL_checkinteger(L, 2);
+    config.sample_rate          = luaL_checkinteger(L, 3);
+    config.channel_format       = luaL_checkinteger(L, 4);
+    config.communication_format = luaL_checkinteger(L, 5);
+    config.dma_buf_count        = luaL_checkinteger(L, 6);
+    config.dma_buf_len          = luaL_checkinteger(L, 7);
+    config.intr_alloc_flags     = luaL_checkinteger(L, 8);
+
+    pin.bck_io_num   = luaL_checkinteger(L, 9);
+    pin.ws_io_num    = luaL_checkinteger(L, 10);
+    pin.data_out_num = luaL_checkinteger(L, 11);
+    pin.data_in_num  = luaL_checkinteger(L, 12);
+
+    queue_size = luaL_checkinteger(L, 13);
+
+    if ((error = i2s_lua_setup(unit, &config, &pin, queue_size))) {
+        return luaL_driver_error(L, error);
     }
 
     i2s_userdata_t *user_data = (i2s_userdata_t *)lua_newuserdata(L, sizeof(i2s_userdata_t));
     if (!user_data) {
-       	return luaL_exception(L, I2S_ERR_NOT_ENOUGH_MEMORY);
+        return luaL_exception(L, I2S_ERR_NOT_ENOUGH_MEMORY);
     }
 
     user_data->unit = unit;
@@ -72,24 +95,24 @@ static int li2s_setup( lua_State* L ) {
 }
 
 static int li2s_start( lua_State* L ) {
-	driver_error_t *error;
+    driver_error_t *error;
 
     int unit = luaL_checkinteger(L, 1);
 
     if ((error = i2s_lua_start(unit))) {
-    	return luaL_driver_error(L, error);
+        return luaL_driver_error(L, error);
     }
 
      return 0;
 }
 
 static int li2s_stop( lua_State* L ) {
-	driver_error_t *error;
+    driver_error_t *error;
 
     int unit = luaL_checkinteger(L, 1);
 
     if ((error = i2s_lua_stop(unit))) {
-    	return luaL_driver_error(L, error);
+        return luaL_driver_error(L, error);
     }
 
     return 0;
@@ -99,26 +122,89 @@ static int li2s_stop( lua_State* L ) {
 static int li2s_ins_gc (lua_State *L) {
     i2s_userdata_t *udata = NULL;
     udata = (i2s_userdata_t *)luaL_checkudata(L, 1, "i2s.ins");
-	if (udata) {
-	}
+    if (udata) {
+    }
 
-	return 0;
+    return 0;
 }
 
+static const LUA_REG_TYPE li2s_bps_map[] = {
+    { LSTRKEY( "8b"  ), LINTVAL( I2S_BITS_PER_SAMPLE_8BIT  ) },
+    { LSTRKEY( "16b" ), LINTVAL( I2S_BITS_PER_SAMPLE_16BIT ) },
+    { LSTRKEY( "24b" ), LINTVAL( I2S_BITS_PER_SAMPLE_24BIT ) },
+    { LSTRKEY( "32b" ), LINTVAL( I2S_BITS_PER_SAMPLE_32BIT ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2s_channel_map[] = {
+    { LSTRKEY( "mono" ),   LINTVAL( I2S_CHANNEL_MONO   ) },
+    { LSTRKEY( "stereo" ), LINTVAL( I2S_CHANNEL_STEREO ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2s_commfmt_map[] = { // bit mapped
+    { LSTRKEY( "i2s"      ), LINTVAL( I2S_COMM_FORMAT_I2S       ) },
+    { LSTRKEY( "i2smsb"   ), LINTVAL( I2S_COMM_FORMAT_I2S_MSB   ) },
+    { LSTRKEY( "i2slsb"   ), LINTVAL( I2S_COMM_FORMAT_I2S_LSB   ) },
+    { LSTRKEY( "pcm"      ), LINTVAL( I2S_COMM_FORMAT_PCM       ) },
+    { LSTRKEY( "pcmshort" ), LINTVAL( I2S_COMM_FORMAT_PCM_SHORT ) },
+    { LSTRKEY( "pcmlong"  ), LINTVAL( I2S_COMM_FORMAT_PCM_LONG  ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2s_chanfmt_map[] = {
+    { LSTRKEY( "rl" ), LINTVAL( I2S_CHANNEL_FMT_RIGHT_LEFT ) },
+    { LSTRKEY( "ar" ), LINTVAL( I2S_CHANNEL_FMT_ALL_RIGHT  ) },
+    { LSTRKEY( "al" ), LINTVAL( I2S_CHANNEL_FMT_ALL_LEFT   ) },
+    { LSTRKEY( "or" ), LINTVAL( I2S_CHANNEL_FMT_ONLY_RIGHT ) },
+    { LSTRKEY( "ol" ), LINTVAL( I2S_CHANNEL_FMT_ONLY_LEFT  ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2s_pdmsrr_map[] = {
+    { LSTRKEY( "64"  ), LINTVAL( PDM_SAMPLE_RATE_RATIO_64  ) },
+    { LSTRKEY( "128" ), LINTVAL( PDM_SAMPLE_RATE_RATIO_128 ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2s_pdmconv_map[] = {
+    { LSTRKEY( "enable"  ), LINTVAL( PDM_PCM_CONV_ENABLE  ) },
+    { LSTRKEY( "disable" ), LINTVAL( PDM_PCM_CONV_DISABLE ) },
+    { LNILKEY, LNILVAL }
+};
+
+static const LUA_REG_TYPE li2s_mode_map[] = { // bit mapped
+    { LSTRKEY( "master" ), LINTVAL( I2S_MODE_MASTER       ) },
+    { LSTRKEY( "slave"  ), LINTVAL( I2S_MODE_SLAVE        ) },
+    { LSTRKEY( "tx"     ), LINTVAL( I2S_MODE_TX           ) },
+    { LSTRKEY( "rx"     ), LINTVAL( I2S_MODE_RX           ) },
+    { LSTRKEY( "dac"    ), LINTVAL( I2S_MODE_DAC_BUILT_IN ) },
+//  { LSTRKEY( "adc"    ), LINTVAL( I2S_MODE_ADC_BUILT_IN ) },
+    { LSTRKEY( "pdm"    ), LINTVAL( I2S_MODE_PDM          ) },
+    { LNILKEY, LNILVAL }
+};
+
 static const LUA_REG_TYPE li2s_map[] = {
-    { LSTRKEY( "setup" ), LFUNCVAL( li2s_setup    ) },
-	{ LSTRKEY( "error" ), LROVAL  ( i2s_error_map ) },
-	I2S_I2S0
-	I2S_I2S1
+    { LSTRKEY( "setup" ),   LFUNCVAL( li2s_setup       ) },
+    { LSTRKEY( "bps" ),     LROVAL  ( li2s_bps_map     ) },
+    { LSTRKEY( "channel" ), LROVAL  ( li2s_channel_map ) },
+    { LSTRKEY( "commfmt" ), LROVAL  ( li2s_commfmt_map ) },
+    { LSTRKEY( "chanfmt" ), LROVAL  ( li2s_chanfmt_map ) },
+    { LSTRKEY( "pdmsrr" ),  LROVAL  ( li2s_pdmsrr_map  ) },
+    { LSTRKEY( "pdmconv" ), LROVAL  ( li2s_pdmconv_map ) },
+    { LSTRKEY( "mode" ),    LROVAL  ( li2s_mode_map    ) },
+    { LSTRKEY( "error" ),   LROVAL  ( i2s_error_map    ) },
+    I2S_I2S0
+    I2S_I2S1
     { LNILKEY, LNILVAL }
 };
 
 static const LUA_REG_TYPE li2s_ins_map[] = {
-	{ LSTRKEY( "start"       ), LFUNCVAL( li2s_start   ) },
+    { LSTRKEY( "start"       ), LFUNCVAL( li2s_start   ) },
     { LSTRKEY( "stop"        ), LFUNCVAL( li2s_stop    ) },
     { LSTRKEY( "__metatable" ), LROVAL  ( li2s_ins_map ) },
-	{ LSTRKEY( "__index"     ), LROVAL  ( li2s_ins_map ) },
-	{ LSTRKEY( "__gc"        ), LROVAL  ( li2s_ins_gc  ) },
+    { LSTRKEY( "__index"     ), LROVAL  ( li2s_ins_map ) },
+    { LSTRKEY( "__gc"        ), LROVAL  ( li2s_ins_gc  ) },
     { LNILKEY, LNILVAL }
 };
 

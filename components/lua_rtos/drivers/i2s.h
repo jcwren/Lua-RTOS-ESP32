@@ -41,48 +41,27 @@
 
 #include <drivers/cpu.h>
 
-#define I2S_TRANSACTION_INITIALIZER -1
-
-// Internal driver structure
 typedef struct i2s {
-  uint8_t mode;
-  uint8_t setup;
   struct mtx mtx;
+  uint8_t setup;
+
+  i2s_config_t config;
+  i2s_pin_config_t pin;
+  int queue_size;
+  void *i2s_queue;
 } i2s_t;
-
-// Resources used by I2S
-typedef struct {
-  uint8_t ws;
-  uint8_t bck;
-  uint8_t din;
-  uint8_t dout;
-} i2s_resources_t;
-
-#if 0
-#define I2C_SLAVE	0
-#define I2C_MASTER	1
-#endif
 
 // I2S errors
 #define I2S_ERR_IS_NOT_SETUP             (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  0)
 #define I2S_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  1)
-#define I2S_ERR_NOT_ENOUGH_MEMORY		 (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  2)
-// #define I2C_ERR_CANT_INIT                (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  0)
-// #define I2C_ERR_INVALID_OPERATION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  3)
-// #define I2C_ERR_INVALID_TRANSACTION		 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  5)
-// #define I2C_ERR_NOT_ACK					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  6)
-// #define I2C_ERR_TIMEOUT					 (DRIVER_EXCEPTION_BASE(I2C_DRIVER_ID) |  7)
+#define I2S_ERR_NOT_ENOUGH_MEMORY        (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  2)
+#define I2S_ERR_DRIVER_INSTALL           (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  3)
+#define I2S_ERR_DRIVER_SET_PIN           (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  4)
 
 void i2s_init();
 
-driver_error_t *i2s_lua_setup(int unit, int mode);
+driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_config_t *i2s_pins, int queue_size);
 driver_error_t *i2s_lua_start(int unit);
 driver_error_t *i2s_lua_stop(int unit);
-#if 0
-driver_error_t *i2s_write_address(int unit, int *transaction, char address, int read);
-driver_error_t *i2s_write(int unit, int *transaction, char *data, int len);
-driver_error_t *i2s_read(int unit, int *transaction, char *data, int len);
-driver_error_t *i2s_flush(int unit, int *transaction, int new_transaction);
-#endif
 
 #endif /* I2S_H */
