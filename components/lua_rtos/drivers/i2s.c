@@ -181,6 +181,10 @@ driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_conf
   i2s_p->config.dma_buf_count        = config->dma_buf_count;
   i2s_p->config.dma_buf_len          = config->dma_buf_len;
 
+  i2s_p->num_channels = (config->channel_format < I2S_CHANNEL_FMT_ONLY_RIGHT) ? 2 : 1;
+  i2s_p->bytes_per_sample = ((config->bits_per_sample + 15) / 16) * 2;
+  i2s_p->bytes_per_pushpop = i2s_p->bytes_per_sample * i2s_p->num_channels;
+
   i2s_p->pin.bck_io_num   = pin->bck_io_num;
   i2s_p->pin.ws_io_num    = pin->ws_io_num;
   i2s_p->pin.data_out_num = pin->data_out_num;

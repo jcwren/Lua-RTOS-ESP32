@@ -46,6 +46,9 @@ typedef struct i2s {
   uint8_t setup;
 
   i2s_config_t config;
+  int num_channels;
+  int bytes_per_sample;
+  int bytes_per_pushpop;
   i2s_pin_config_t pin;
   int evtqueue_size;
   void *evtqueue;
