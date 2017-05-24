@@ -3,7 +3,6 @@
 *.pyc
 *.a
 *.d
-*.swp
 
 # gtags
 GTAGS
@@ -18,6 +17,9 @@ GPATH
 .#*
 \#*#
 
+# vim temp file suffix
+*.swp
+
 components/spiffs_image/image/tests/
 build/
 *.dis
@@ -26,5 +28,6 @@ build/
 **/.DS_Store
 components/mkspiffs/src/mkspiffs
 
+env
 sdkconfig
 sdkconfig.old
