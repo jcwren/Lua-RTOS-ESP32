@@ -3,6 +3,7 @@
 *.pyc
 *.a
 *.d
+*.swp
 
 # gtags
 GTAGS

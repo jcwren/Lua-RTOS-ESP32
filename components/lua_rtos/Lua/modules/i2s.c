@@ -61,8 +61,9 @@ static int li2s_sanity (lua_State *L, int unit) {
 
 static int li2s_setup( lua_State* L ) {
   driver_error_t *error;
+  i2s_userdata_t *user_data;
   int unit;
-  int queue_size;
+  int evtqueue_size;
   i2s_config_t config;
   i2s_pin_config_t pin;
 
@@ -84,13 +85,12 @@ static int li2s_setup( lua_State* L ) {
   pin.data_out_num = luaL_checkinteger(L, 11);
   pin.data_in_num  = luaL_checkinteger(L, 12);
 
-  queue_size = luaL_checkinteger(L, 13);
+  evtqueue_size = luaL_checkinteger(L, 13);
 
-  if ((error = i2s_lua_setup(unit, &config, &pin, queue_size)))
+  if ((error = i2s_lua_setup(unit, &config, &pin, evtqueue_size)))
     return luaL_driver_error(L, error);
 
-  i2s_userdata_t *user_data = (i2s_userdata_t *)lua_newuserdata(L, sizeof(i2s_userdata_t));
-  if (!user_data)
+  if (!(user_data = (i2s_userdata_t *)lua_newuserdata(L, sizeof(i2s_userdata_t))))
     return luaL_exception(L, I2S_ERR_NOT_ENOUGH_MEMORY);
 
   user_data->unit = unit;
@@ -266,10 +266,10 @@ static int li2s_dacmode( lua_State* L ) {
 
 // Destructor
 static int li2s_ins_gc (lua_State *L) {
-  i2s_userdata_t *udata = NULL;
+  i2s_userdata_t *udata;
 
-  udata = (i2s_userdata_t *)luaL_checkudata(L, 1, "i2s.ins");
-  if (udata) {
+  if ((udata = (i2s_userdata_t *)luaL_checkudata(L, 1, "i2s.ins"))) {
+    // If i2s_userdata_t has any allocation items, free them here
   }
 
   return 0;
@@ -326,7 +326,7 @@ static const LUA_REG_TYPE li2s_mode_map[] = { // bit mapped
   { LSTRKEY( "TX"     ), LINTVAL( I2S_MODE_TX           ) },
   { LSTRKEY( "RX"     ), LINTVAL( I2S_MODE_RX           ) },
   { LSTRKEY( "DAC"    ), LINTVAL( I2S_MODE_DAC_BUILT_IN ) },
-  //  { LSTRKEY( "ADC"    ), LINTVAL( I2S_MODE_ADC_BUILT_IN ) },
+//{ LSTRKEY( "ADC"    ), LINTVAL( I2S_MODE_ADC_BUILT_IN ) },
   { LSTRKEY( "PDM"    ), LINTVAL( I2S_MODE_PDM          ) },
   { LNILKEY, LNILVAL }
 };
@@ -340,6 +340,14 @@ static const LUA_REG_TYPE li2s_dac_map[] = { // bit mapped
   { LNILKEY, LNILVAL }
 };
 
+static const LUA_REG_TYPE li2s_event_map[] = {
+  { LSTRKEY( "DMA_ERROR" ), LINTVAL( I2S_EVENT_DMA_ERROR ) },
+  { LSTRKEY( "TX_DONE"   ), LINTVAL( I2S_EVENT_TX_DONE   ) },
+  { LSTRKEY( "RX_DONE"   ), LINTVAL( I2S_EVENT_RX_DONE   ) },
+  { LSTRKEY( "MAX"       ), LINTVAL( I2S_EVENT_MAX       ) },
+  { LNILKEY, LNILVAL }
+};
+
 static const LUA_REG_TYPE li2s_map[] = {
   { LSTRKEY( "setup" ),   LFUNCVAL( li2s_setup       ) },
   { LSTRKEY( "BPS" ),     LROVAL  ( li2s_bps_map     ) },
@@ -350,6 +358,7 @@ static const LUA_REG_TYPE li2s_map[] = {
   { LSTRKEY( "PDMCONV" ), LROVAL  ( li2s_pdmconv_map ) },
   { LSTRKEY( "MODE" ),    LROVAL  ( li2s_mode_map    ) },
   { LSTRKEY( "DAC" ),     LROVAL  ( li2s_dac_map     ) },
+  { LSTRKEY( "EVENT" ),   LROVAL  ( li2s_event_map   ) },
   { LSTRKEY( "error" ),   LROVAL  ( i2s_error_map    ) },
   I2S_I2S0
   I2S_I2S1

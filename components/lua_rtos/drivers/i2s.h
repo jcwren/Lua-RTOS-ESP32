@@ -47,8 +47,8 @@ typedef struct i2s {
 
   i2s_config_t config;
   i2s_pin_config_t pin;
-  int queue_size;
-  void *i2s_queue;
+  int evtqueue_size;
+  void *evtqueue;
 } i2s_t;
 
 // I2S errors
@@ -63,7 +63,7 @@ void i2s_init();
 
 int i2s_lua_exists (int unit);
 int i2s_lua_is_setup (int unit);
-driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_config_t *i2s_pins, int queue_size);
+driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_config_t *i2s_pins, int evtqueue_size);
 driver_error_t *i2s_lua_start(int unit);
 driver_error_t *i2s_lua_stop(int unit);
 driver_error_t *i2s_lua_write(int unit, void *src, size_t size, TickType_t ticks_to_wait);

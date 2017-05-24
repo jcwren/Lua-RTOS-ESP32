@@ -119,9 +119,10 @@ void i2s_lua_init() {
   }
 }
 
-driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_config_t *pin, int queue_size) {
+driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_config_t *pin, int evtqueue_size) {
   driver_error_t *error;
   i2s_t *i2s_p;
+  void *evtqueue = NULL;
 
   if (!((1 << unit) & CPU_I2S_ALL)) {
     return driver_operation_error(I2S_DRIVER, I2S_ERR_INVALID_UNIT, NULL);
@@ -140,18 +141,19 @@ driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_conf
       periph_module_disable(PERIPH_I2S1_MODULE);
     }
 
-    if (i2s_p->i2s_queue) {
-      free (i2s_p->i2s_queue);
-      i2s_p->i2s_queue = NULL;
+    if (i2s_p->evtqueue) {
+      free (i2s_p->evtqueue);
+      i2s_p->evtqueue = NULL;
     }
 
     i2s_p->setup = 0;
   }
 
-  void *i2s_queue = calloc (queue_size, sizeof (uint8_t));
-  if (!i2s_queue) {
-    mtx_unlock(&i2s_p->mtx);
-    return driver_operation_error(I2S_DRIVER, I2S_ERR_NOT_ENOUGH_MEMORY, NULL);
+  if (evtqueue_size) {
+    if (!(evtqueue = calloc (evtqueue_size, sizeof (i2s_event_t)))) {
+      mtx_unlock(&i2s_p->mtx);
+      return driver_operation_error(I2S_DRIVER, I2S_ERR_NOT_ENOUGH_MEMORY, NULL);
+    }
   }
 
   if ((error = i2s_lock_pin(unit, pin))) {
@@ -159,7 +161,7 @@ driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_conf
     return error;
   }
 
-  if (i2s_driver_install (unit, config, queue_size, i2s_queue) != ESP_OK) {
+  if (i2s_driver_install (unit, config, evtqueue_size, &evtqueue) != ESP_OK) {
     mtx_unlock(&i2s_p->mtx);
     return driver_operation_error(I2S_DRIVER, I2S_ERR_DRIVER_INSTALL, NULL);
   }
@@ -184,8 +186,8 @@ driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_conf
   i2s_p->pin.data_out_num = pin->data_out_num;
   i2s_p->pin.data_in_num  = pin->data_in_num;
 
-  i2s_p->queue_size = queue_size;
-  i2s_p->i2s_queue  = i2s_queue;
+  i2s_p->evtqueue_size = evtqueue_size;
+  i2s_p->evtqueue      = evtqueue;
 
   i2s_p->setup = 1;
 
