@@ -41,6 +41,9 @@
 
 #include <drivers/cpu.h>
 
+//
+//
+//
 typedef struct i2s {
   struct mtx mtx;
   uint8_t setup;
@@ -54,31 +57,35 @@ typedef struct i2s {
   void *evtqueue;
 } i2s_t;
 
+//
 // I2S errors
-#define I2S_ERR_IS_NOT_SETUP             (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  0)
-#define I2S_ERR_INVALID_UNIT             (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  1)
-#define I2S_ERR_NOT_ENOUGH_MEMORY        (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  2)
-#define I2S_ERR_DRIVER_INSTALL           (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  3)
-#define I2S_ERR_DRIVER_SET_PIN           (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  4)
-#define I2S_ERR_DRIVER_ERROR             (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  5)
-#define I2S_ERR_SIZE_GT_LEN              (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  6)
-#define I2S_ERR_BAD_SAMPLE_LENGTH        (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  7)
+//
+#define I2S_ERR_IS_NOT_SETUP      (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  0)
+#define I2S_ERR_INVALID_UNIT      (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  1)
+#define I2S_ERR_NOT_ENOUGH_MEMORY (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  2)
+#define I2S_ERR_DRIVER_INSTALL    (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  3)
+#define I2S_ERR_DRIVER_SET_PIN    (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  4)
+#define I2S_ERR_DRIVER_ERROR      (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  5)
+#define I2S_ERR_SIZE_GT_LEN       (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  6)
+#define I2S_ERR_BAD_SAMPLE_LENGTH (DRIVER_EXCEPTION_BASE(I2S_DRIVER_ID) |  7)
 
+//
+//
+//
 void i2s_init ();
-
 int i2s_lua_exists (int unit);
 int i2s_lua_is_setup (int unit);
 int i2s_lua_get_pushpop_size (int unit);
 driver_error_t *i2s_lua_setup (int unit, const i2s_config_t *config, i2s_pin_config_t *i2s_pins, int evtqueue_size);
 driver_error_t *i2s_lua_start (int unit);
 driver_error_t *i2s_lua_stop (int unit);
-driver_error_t *i2s_lua_write (int unit, void *src, size_t size, TickType_t ticks_to_wait);
-driver_error_t *i2s_lua_read (int unit, void *dest, size_t size, TickType_t ticks_to_wait);
-driver_error_t *i2s_lua_push (int unit, void *sample, TickType_t ticks_to_wait);
-driver_error_t *i2s_lua_pop (int unit, void *sample, TickType_t ticks_to_wait);
+driver_error_t *i2s_lua_write (int unit, void *src, size_t size, TickType_t ticks_to_wait, int *bytesWritten);
+driver_error_t *i2s_lua_read (int unit, void *dest, size_t size, TickType_t ticks_to_wait, int *bytesRead);
+driver_error_t *i2s_lua_push (int unit, void *sample, TickType_t ticks_to_wait, int *bytesWritten);
+driver_error_t *i2s_lua_pop (int unit, void *sample, TickType_t ticks_to_wait, int *bytesRead);
 driver_error_t *i2s_lua_zerobuf (int unit);
-driver_error_t *i2s_lua_setclk (int unit, uint32_t rate);
-driver_error_t *i2s_lua_setrate (int unit, uint32_t rate, int bits, int channel);
+driver_error_t *i2s_lua_setrate (int unit, uint32_t rate);
+driver_error_t *i2s_lua_setclk (int unit, uint32_t rate, int bits, int channel);
 driver_error_t *i2s_lua_dacmode (int dacmode);
 
 #endif /* I2S_H */

@@ -136,6 +136,7 @@ static int li2s_write (lua_State* L) {
   int errval;
   driver_error_t *error;
   size_t src_len;
+  int bytesWritten;
 
   int unit = luaL_checkinteger (L, 1);
   const char *src = luaL_checklstring (L, 3, &src_len);
@@ -144,8 +145,10 @@ static int li2s_write (lua_State* L) {
   if ((errval = li2s_sanity (L, unit)))
     return errval;
 
-  if ((error = i2s_lua_write (unit, (void *) src, src_len, ticks_to_wait)))
+  if ((error = i2s_lua_write (unit, (void *) src, src_len, ticks_to_wait, &bytesWritten)))
     return luaL_driver_error (L, error);
+
+  lua_pushinteger (L, bytesWritten);
 
   return 0;
 }
@@ -157,6 +160,7 @@ static int li2s_read (lua_State* L) {
   int unit = luaL_checkinteger (L, 1);
   int size = luaL_checkinteger (L, 2);
   int ticks_to_wait = luaL_optinteger (L, 3, portMAX_DELAY);
+  int bytesRead;
   TString *ts;
   char *str;
 
@@ -169,9 +173,10 @@ static int li2s_read (lua_State* L) {
   ts = luaS_createlngstrobj (L, size);
   str = getstr (ts);
 
-  if ((error = i2s_lua_read (unit, (void *) str, size, ticks_to_wait)))
+  if ((error = i2s_lua_read (unit, (void *) str, size, ticks_to_wait, &bytesRead)))
     return luaL_driver_error (L, error);
 
+  lua_pushinteger (L, bytesRead);
   lua_pushstring (L, str);
 
   return 0;
@@ -181,6 +186,7 @@ static int li2s_push (lua_State* L) {
   int errval;
   driver_error_t *error;
   uint32_t sample_len;
+  int bytesWritten;
 
   int unit = luaL_checkinteger (L, 1);
   const char *sample = luaL_checklstring (L, 2, &sample_len);
@@ -192,8 +198,10 @@ static int li2s_push (lua_State* L) {
   if (sample_len != i2s_lua_get_pushpop_size (unit))
     return luaL_driver_error (L, driver_operation_error (I2S_DRIVER, I2S_ERR_BAD_SAMPLE_LENGTH, NULL));
 
-  if ((error = i2s_lua_push (unit, (void *) sample, ticks_to_wait)))
+  if ((error = i2s_lua_push (unit, (void *) sample, ticks_to_wait, &bytesWritten)))
     return luaL_driver_error (L, error);
+
+  lua_pushinteger (L, bytesWritten);
 
   return 0;
 }
@@ -201,6 +209,7 @@ static int li2s_push (lua_State* L) {
 static int li2s_pop (lua_State* L) {
   int errval;
   driver_error_t *error;
+  int bytesRead;
   TString *ts;
   char *str;
 
@@ -213,9 +222,10 @@ static int li2s_pop (lua_State* L) {
   ts = luaS_createlngstrobj (L, i2s_lua_get_pushpop_size (unit));
   str = getstr (ts);
 
-  if ((error = i2s_lua_push (unit, (void *) str, ticks_to_wait)))
+  if ((error = i2s_lua_pop (unit, (void *) str, ticks_to_wait, &bytesRead)))
     return luaL_driver_error (L, error);
 
+  lua_pushinteger (L, bytesRead);
   lua_pushstring (L, str);
 
   return 0;
@@ -236,7 +246,7 @@ static int li2s_zerobuf (lua_State* L) {
   return 0;
 }
 
-static int li2s_setclk (lua_State* L) {
+static int li2s_setrate (lua_State* L) {
   int errval;
   driver_error_t *error;
 
@@ -246,13 +256,13 @@ static int li2s_setclk (lua_State* L) {
   if ((errval = li2s_sanity (L, unit)))
     return errval;
 
-  if ((error = i2s_lua_setclk (unit, rate)))
+  if ((error = i2s_lua_setrate (unit, rate)))
     return luaL_driver_error (L, error);
 
   return 0;
 }
 
-static int li2s_setrate (lua_State* L) {
+static int li2s_setclk (lua_State* L) {
   int errval;
   driver_error_t *error;
 
@@ -264,7 +274,7 @@ static int li2s_setrate (lua_State* L) {
   if ((errval = li2s_sanity (L, unit)))
     return errval;
 
-  if ((error = i2s_lua_setrate (unit, rate, bits, channel)))
+  if ((error = i2s_lua_setclk (unit, rate, bits, channel)))
     return luaL_driver_error (L, error);
 
   return 0;
@@ -275,9 +285,8 @@ static int li2s_dacmode (lua_State* L) {
 
   int dacmode = luaL_checkinteger (L, 1);
 
-  if ((error = i2s_lua_dacmode (dacmode))) {
+  if ((error = i2s_lua_dacmode (dacmode)))
     return luaL_driver_error (L, error);
-  }
 
   return 0;
 }
