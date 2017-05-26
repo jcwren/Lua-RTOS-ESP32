@@ -48,12 +48,14 @@
 // Driver locks
 driver_unit_lock_t i2s_locks[CPU_LAST_I2S + 1];
 
-DRIVER_REGISTER_ERROR(I2S, i2s, NotSetup, "is not setup", I2S_ERR_IS_NOT_SETUP);
-DRIVER_REGISTER_ERROR(I2S, i2s, InvalidUnit, "invalid unit", I2S_ERR_INVALID_UNIT);
-DRIVER_REGISTER_ERROR(I2S, i2s, NotEnoughtMemory, "not enough memory", I2S_ERR_NOT_ENOUGH_MEMORY);
-DRIVER_REGISTER_ERROR(I2S, i2s, DriverInstall, "driver install", I2S_ERR_DRIVER_INSTALL);
-DRIVER_REGISTER_ERROR(I2S, i2s, DriverSetPin, "driver set_pin", I2S_ERR_DRIVER_SET_PIN);
-DRIVER_REGISTER_ERROR(I2S, i2s, DriverError, "driver error", I2S_ERR_DRIVER_SET_PIN);
+DRIVER_REGISTER_ERROR (I2S, i2s, NotSetup, "is not setup", I2S_ERR_IS_NOT_SETUP);
+DRIVER_REGISTER_ERROR (I2S, i2s, InvalidUnit, "invalid unit", I2S_ERR_INVALID_UNIT);
+DRIVER_REGISTER_ERROR (I2S, i2s, NotEnoughtMemory, "not enough memory", I2S_ERR_NOT_ENOUGH_MEMORY);
+DRIVER_REGISTER_ERROR (I2S, i2s, DriverInstall, "driver install", I2S_ERR_DRIVER_INSTALL);
+DRIVER_REGISTER_ERROR (I2S, i2s, DriverSetPin, "driver set_pin", I2S_ERR_DRIVER_SET_PIN);
+DRIVER_REGISTER_ERROR (I2S, i2s, DriverError, "driver error", I2S_ERR_DRIVER_ERROR);
+DRIVER_REGISTER_ERROR (I2S, i2s, SizeGtLen, "size > string len", I2S_ERR_SIZE_GT_LEN);
+DRIVER_REGISTER_ERROR (I2S, i2s, BadSampleSize, "bad sample length", I2S_ERR_BAD_SAMPLE_LENGTH);
 
 // i2s info needed by driver
 static i2s_t i2s[CPU_LAST_I2S + 1];
@@ -61,39 +63,39 @@ static i2s_t i2s[CPU_LAST_I2S + 1];
 /*
  * Helper functions
  */
-static driver_error_t *i2s_lock_pin(int unit, i2s_pin_config_t *pin) {
+static driver_error_t *i2s_lock_pin (int unit, i2s_pin_config_t *pin) {
   driver_unit_lock_error_t *lock_error = NULL;
 
-  if ((lock_error = driver_lock(I2S_DRIVER, unit, GPIO_DRIVER, pin->bck_io_num))) {
-    return driver_lock_error(I2S_DRIVER, lock_error);
+  if ((lock_error = driver_lock (I2S_DRIVER, unit, GPIO_DRIVER, pin->bck_io_num))) {
+    return driver_lock_error (I2S_DRIVER, lock_error);
   }
 
-  if ((lock_error = driver_lock(I2S_DRIVER, unit, GPIO_DRIVER, pin->ws_io_num))) {
-    return driver_lock_error(I2S_DRIVER, lock_error);
+  if ((lock_error = driver_lock (I2S_DRIVER, unit, GPIO_DRIVER, pin->ws_io_num))) {
+    return driver_lock_error (I2S_DRIVER, lock_error);
   }
 
   if (pin->data_out_num != -1) {
-    if ((lock_error = driver_lock(I2S_DRIVER, unit, GPIO_DRIVER, pin->data_out_num))) {
-      return driver_lock_error(I2S_DRIVER, lock_error);
+    if ((lock_error = driver_lock (I2S_DRIVER, unit, GPIO_DRIVER, pin->data_out_num))) {
+      return driver_lock_error (I2S_DRIVER, lock_error);
     }
   }
 
   if (pin->data_in_num != -1) {
-    if ((lock_error = driver_lock(I2S_DRIVER, unit, GPIO_DRIVER, pin->data_in_num))) {
-      return driver_lock_error(I2S_DRIVER, lock_error);
+    if ((lock_error = driver_lock (I2S_DRIVER, unit, GPIO_DRIVER, pin->data_in_num))) {
+      return driver_lock_error (I2S_DRIVER, lock_error);
     }
   }
 
   return NULL;
 }
 
-static driver_error_t *i2s_check(int unit) {
+static driver_error_t *i2s_check (int unit) {
   if (!((1 << unit) & CPU_I2S_ALL)) {
-    return driver_operation_error(I2S_DRIVER, I2S_ERR_INVALID_UNIT, NULL);
+    return driver_operation_error (I2S_DRIVER, I2S_ERR_INVALID_UNIT, NULL);
   }
 
   if (!i2s[unit].setup) {
-    return driver_operation_error(I2S_DRIVER, I2S_ERR_IS_NOT_SETUP, NULL);
+    return driver_operation_error (I2S_DRIVER, I2S_ERR_IS_NOT_SETUP, NULL);
   }
 
   return NULL;
@@ -111,7 +113,14 @@ int i2s_lua_is_setup (int unit) {
   return i2s_lua_exists (unit) && i2s [unit].setup;
 }
 
-void i2s_lua_init() {
+int i2s_lua_get_pushpop_size (int unit) {
+  if (!i2s_lua_is_setup (unit))
+    return 0;
+
+  return i2s [unit].bytes_per_pushpop;
+}
+
+void i2s_lua_init () {
   int i;
 
   for (i = 0; i < CPU_LAST_I2S; i++) {
@@ -119,26 +128,26 @@ void i2s_lua_init() {
   }
 }
 
-driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_config_t *pin, int evtqueue_size) {
+driver_error_t *i2s_lua_setup (int unit, const i2s_config_t *config, i2s_pin_config_t *pin, int evtqueue_size) {
   driver_error_t *error;
   i2s_t *i2s_p;
   void *evtqueue = NULL;
 
   if (!((1 << unit) & CPU_I2S_ALL)) {
-    return driver_operation_error(I2S_DRIVER, I2S_ERR_INVALID_UNIT, NULL);
+    return driver_operation_error (I2S_DRIVER, I2S_ERR_INVALID_UNIT, NULL);
   }
 
   i2s_p = &i2s [unit];
 
-  mtx_lock(&i2s_p->mtx);
+  mtx_lock (&i2s_p->mtx);
 
   if (i2s_p->setup) {
-    i2s_driver_uninstall(unit);
+    i2s_driver_uninstall (unit);
 
     if (unit == 0) {
-      periph_module_disable(PERIPH_I2S0_MODULE);
+      periph_module_disable (PERIPH_I2S0_MODULE);
     } else {
-      periph_module_disable(PERIPH_I2S1_MODULE);
+      periph_module_disable (PERIPH_I2S1_MODULE);
     }
 
     if (i2s_p->evtqueue) {
@@ -151,25 +160,25 @@ driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_conf
 
   if (evtqueue_size) {
     if (!(evtqueue = calloc (evtqueue_size, sizeof (i2s_event_t)))) {
-      mtx_unlock(&i2s_p->mtx);
-      return driver_operation_error(I2S_DRIVER, I2S_ERR_NOT_ENOUGH_MEMORY, NULL);
+      mtx_unlock (&i2s_p->mtx);
+      return driver_operation_error (I2S_DRIVER, I2S_ERR_NOT_ENOUGH_MEMORY, NULL);
     }
   }
 
-  if ((error = i2s_lock_pin(unit, pin))) {
-    mtx_unlock(&i2s_p->mtx);
+  if ((error = i2s_lock_pin (unit, pin))) {
+    mtx_unlock (&i2s_p->mtx);
     return error;
   }
 
   if (i2s_driver_install (unit, config, evtqueue_size, &evtqueue) != ESP_OK) {
-    mtx_unlock(&i2s_p->mtx);
-    return driver_operation_error(I2S_DRIVER, I2S_ERR_DRIVER_INSTALL, NULL);
+    mtx_unlock (&i2s_p->mtx);
+    return driver_operation_error (I2S_DRIVER, I2S_ERR_DRIVER_INSTALL, NULL);
   }
 
   if (i2s_set_pin (unit, pin) != ESP_OK) {
     i2s_driver_uninstall (unit);
-    mtx_unlock(&i2s_p->mtx);
-    return driver_operation_error(I2S_DRIVER, I2S_ERR_DRIVER_SET_PIN, NULL);
+    mtx_unlock (&i2s_p->mtx);
+    return driver_operation_error (I2S_DRIVER, I2S_ERR_DRIVER_SET_PIN, NULL);
   }
 
   i2s_p->config.mode                 = config->mode;
@@ -195,168 +204,168 @@ driver_error_t *i2s_lua_setup(int unit, const i2s_config_t *config, i2s_pin_conf
 
   i2s_p->setup = 1;
 
-  mtx_unlock(&i2s_p->mtx);
+  mtx_unlock (&i2s_p->mtx);
 
-  syslog(LOG_INFO,
+  syslog (LOG_INFO,
       "i2s%u at pins bck=%s%d/ws=%s%d/dout=%s%d/din=%s%d", unit,
-      gpio_portname(pin->bck_io_num), gpio_name(pin->bck_io_num),
-      gpio_portname(pin->ws_io_num), gpio_name(pin->ws_io_num),
-      gpio_portname(pin->data_out_num), gpio_name(pin->data_out_num),
-      gpio_portname(pin->data_in_num), gpio_name(pin->data_in_num)
+      gpio_portname (pin->bck_io_num), gpio_name (pin->bck_io_num),
+      gpio_portname (pin->ws_io_num), gpio_name (pin->ws_io_num),
+      gpio_portname (pin->data_out_num), gpio_name (pin->data_out_num),
+      gpio_portname (pin->data_in_num), gpio_name (pin->data_in_num)
       );
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_start(int unit) {
+driver_error_t *i2s_lua_start (int unit) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
-  if (i2s_start(unit) != ESP_OK) {
-    error = driver_operation_error(I2S_DRIVER, I2S_ERR_DRIVER_ERROR, NULL);
+  if (i2s_start (unit) != ESP_OK) {
+    error = driver_operation_error (I2S_DRIVER, I2S_ERR_DRIVER_ERROR, NULL);
   }
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_stop(int unit) {
+driver_error_t *i2s_lua_stop (int unit) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
-  if (i2s_stop(unit) != ESP_OK) {
-    error = driver_operation_error(I2S_DRIVER, I2S_ERR_DRIVER_ERROR, NULL);
+  if (i2s_stop (unit) != ESP_OK) {
+    error = driver_operation_error (I2S_DRIVER, I2S_ERR_DRIVER_ERROR, NULL);
   }
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_write(int unit, void *src, size_t size, TickType_t ticks_to_wait) {
+driver_error_t *i2s_lua_write (int unit, void *src, size_t size, TickType_t ticks_to_wait) {
   driver_error_t *error;
   int ret;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
   if ((ret = i2s_write_bytes (unit, src, size, ticks_to_wait)) == ESP_FAIL) {
-    error = driver_operation_error(I2S_DRIVER, I2S_ERR_DRIVER_ERROR, NULL);
+    error = driver_operation_error (I2S_DRIVER, I2S_ERR_DRIVER_ERROR, NULL);
   }
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_read(int unit, void *dest, size_t size, TickType_t ticks_to_wait) {
+driver_error_t *i2s_lua_read (int unit, void *dest, size_t size, TickType_t ticks_to_wait) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_push(int unit, void *sample, TickType_t ticks_to_wait) {
+driver_error_t *i2s_lua_push (int unit, void *sample, TickType_t ticks_to_wait) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_pop(int unit, void *sample, TickType_t ticks_to_wait) {
+driver_error_t *i2s_lua_pop (int unit, void *sample, TickType_t ticks_to_wait) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_zerobuf(int unit) {
+driver_error_t *i2s_lua_zerobuf (int unit) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_setclk(int unit, uint32_t rate) {
+driver_error_t *i2s_lua_setclk (int unit, uint32_t rate) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_setrate(int unit, uint32_t rate, int bits, int channel) {
+driver_error_t *i2s_lua_setrate (int unit, uint32_t rate, int bits, int channel) {
   driver_error_t *error;
 
-  if ((error = i2s_check(unit))) {
+  if ((error = i2s_check (unit))) {
     return error;
   }
 
-  mtx_lock(&i2s[unit].mtx);
+  mtx_lock (&i2s[unit].mtx);
 
 
-  mtx_unlock(&i2s[unit].mtx);
+  mtx_unlock (&i2s[unit].mtx);
 
   return NULL;
 }
 
-driver_error_t *i2s_lua_dacmode(int dacmode) {
+driver_error_t *i2s_lua_dacmode (int dacmode) {
   // driver_error_t *error;
 
   return NULL;
 }
 
-DRIVER_REGISTER(I2S,i2s,i2s_locks,i2s_lua_init,NULL);
+DRIVER_REGISTER (I2S,i2s,i2s_locks,i2s_lua_init,NULL);
