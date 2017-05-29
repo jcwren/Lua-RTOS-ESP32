@@ -156,7 +156,7 @@ driver_error_t *i2s_lua_setup (int unit, const i2s_config_t *config, i2s_pin_con
     return error;
   }
 
-  if (i2s_driver_install (unit, config, evtqueue_size, &evtqueue) != ESP_OK) {
+  if (i2s_driver_install (unit, config, evtqueue_size, evtqueue) != ESP_OK) {
     mtx_unlock (&i2s_p->mtx);
     return driver_operation_error (I2S_DRIVER, I2S_ERR_DRIVER_INSTALL, NULL);
   }
